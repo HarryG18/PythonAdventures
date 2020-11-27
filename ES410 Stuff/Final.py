@@ -33,7 +33,7 @@ async def proxy(reader, writer):
         if "Extrude(" in decoded_data:
 
             print(f"WE GOT THE JUICE BABY... \nNevermind we got this command: {decoded_data}")
-            #Write to serial port 
+            #Write to serial port the characters between the brackets, the extrusion amount e.g. Extrude(432302) = write(32302)
             Serial_Port.write(decoded_data[decoded_data.find("(")+1:decoded_data.find(")")].encode())
         
         # Run the "writer" coroutine write(), attempts to send the data immeadiately, if it fails the data
