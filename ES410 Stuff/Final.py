@@ -1,16 +1,19 @@
-# Commands for running program in CMD
-#ProgramPath, RoboDK_IP, RoboDK_Port, Kuka_IP, Kuka_Port = sys.argv
-
-# in CMD python Final.py "RoboDK IP" "RoboDK Port" "KUKA IP" "KUKA Port"
-
+# Importing Libraries
 import asyncio
 import serial
 import sys
 
-# Create serial port on port that Sammy is connected to, check this in command line
+# Create serial port on port that Sammy is connected to, COMx will be whatever port the Sammy is plugged in to
+
 Serial_Port = serial.Serial('COM3')
 
-# Manual defining Info if not using command line to send this information
+# Automatic defining of info using command line when calling program
+# in CMD, type: python Final.py "RoboDK IP" "RoboDK Port" "KUKA IP" "KUKA Port"
+# e.g. python Final.py 172.31.1.149 5000 172.31.1.147 7000
+
+ProgramPath, RoboDK_IP, RoboDK_Port, Kuka_IP, Kuka_Port = sys.argv
+
+# Manual defining of info if not using command line to send this information
 
 RoboDK_IP = '172.31.1.149'    # RoboDK IP   (Set in RoboDK program)
 RoboDK_Port = 5000            # RoboDK Port (Set in RoboDK program)
@@ -24,13 +27,16 @@ async def proxy(reader, writer):
     while True:
         # Await allows us to run the "reader" coroutine read(), letting us read up to the next 2048 bytes
         data = await reader.read(2048)
-        decoded_data = data.decode()
+
         # If what we read actually has data in it i.e. it's not empty
         if not data.strip():
             break
 
+        # decode the data we have recieved into utf-8 format
+        decoded_data = data.decode()
+
         # If what we read has the word "Extrude(" signifiying it's meant for the Sammy board, do stuff
-        if "Extrude(" in decoded_data:
+        if "Extrude" in decoded_data:
 
             print(f"WE GOT THE JUICE BABY... \nNevermind we got this command: {decoded_data}")
             #Write to serial port the characters between the brackets, the extrusion amount e.g. Extrude(432302) = write(32302)
@@ -39,6 +45,7 @@ async def proxy(reader, writer):
         # Run the "writer" coroutine write(), attempts to send the data immeadiately, if it fails the data
         # is queued in an internal buffer until it can be sent
         writer.write(data)
+
         # A drain call acts as flow control, if the internal buffer is too large, it blocks the program from continuing
         # allowing the data to be sent and the buffer to decrease to a low level. If there's nothing to wait for, the
         # await call will complete instantly if there is nothing to wait for
@@ -49,15 +56,18 @@ async def proxy(reader, writer):
 
 #Responsible for making the connection between RoboDK and KUKA
 async def Make_Connection(RoboDK_Reader, RoboDK_Writer):
+
     # Establish a network connection and return a pair of (reader, writer) objects
     # The returned reader and writer objects are instances of StreamReader and StreamWriter classes.
     # These classes contain methods to read and send data
     KUKA_Reader, KUKA_Writer = await asyncio.open_connection(Kuka_IP, Kuka_Port)
+
     # wait for the proxy routines to detect data
     await asyncio.wait([proxy(RoboDK_Reader, KUKA_Writer), proxy(KUKA_Reader, RoboDK_Writer)])
 
 # Set up the event loop if there isn't one already (on startup), or get the current event loop
 EventLoop = asyncio.get_event_loop()
+
 # Start a socket server which will run when the connection is made between RoboDK and KUKA
 # and to use the EventLoop as the servers loop to run through
 MainLoop = asyncio.start_server(Make_Connection, RoboDK_IP, RoboDK_Port, loop=EventLoop)
@@ -69,7 +79,7 @@ try:
     # Runs the event loop forever, until a stop is called
     EventLoop.run_forever()
 except KeyboardInterrupt:
-    # If you press "Ctrl-C, or the DEL key while the proxy is running move on"
+    # If you press "Ctrl-C, or the DEL key while the proxy is running, the proxy will close"
     pass
 finally:
     # Close all Listening sockets on the Proxy
