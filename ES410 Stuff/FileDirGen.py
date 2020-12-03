@@ -1,19 +1,18 @@
+import io
 from pathlib import Path
 from itertools import islice
-import io
 
 
-file = io.open("log.txt", 'w', encoding="utf-8")
+file = io.open("FileDirectory.txt", 'w', encoding="utf-8")
 
-space =  '    '
-branch = '│   '
-tee =    '├── '
-last =   '└── '
+space =  "    "
+branch = "│   "
+tee =    "├── "
+last =   "└── "
 
-def tree(dir_path: Path, level: int=-1, limit_to_directories: bool=False,
-         length_limit: int=10000):
+def tree(dir_path: Path, level: int=-1, limit_to_directories: bool=False, MaxLength: int=10000):
     #Given a directory Path object, print a visual tree structure
-    dir_path = Path(dir_path)  # accept string coerceable to Path
+    dir_path = Path(dir_path)
     files = 0
     directories = 0
     def inner(dir_path: Path, prefix: str='', level=-1):
@@ -26,13 +25,17 @@ def tree(dir_path: Path, level: int=-1, limit_to_directories: bool=False,
             contents = list(sorted(dir_path.iterdir()))
         pointers = [tee] * (len(contents) - 1) + [last]
         for pointer, path in zip(pointers, contents):
-            #Remove .directories from selection
+            #Remove .directories from selection (Exclusion/Inclusion List)
             if path.name[0] != "." and path.name != "Robot Stuff - from Liz" and path.name != "ess":
                 if path.is_dir():
                     yield prefix + pointer + path.name
                     directories += 1
-                    extension = branch if pointer == tee else space 
+                    if pointer == tee:
+                        extension = branch
+                    else:
+                        extension = space 
                     yield from inner(path, prefix=prefix+extension, level=level-1)
+
                 elif not limit_to_directories:
                     info = prefix + pointer + path.name
                     try: 
@@ -44,12 +47,14 @@ def tree(dir_path: Path, level: int=-1, limit_to_directories: bool=False,
                     except UnicodeDecodeError: 
                         pass 
                     yield info
+
     file.write(dir_path.name + "\n")
-    iterator = inner(dir_path, level=level)
-    for line in islice(iterator, length_limit):
+    Repeater = inner(dir_path, level=level)
+
+    for line in islice(Repeater, MaxLength):
         file.write(line + "\n")
-    if next(iterator, None):
-        print(f'... length_limit, {length_limit}, reached, counted:')
+    if next(Repeater, None):
+        print(f'... MaxLength, {MaxLength}, reached, counted:')
     file.write(f'\n{directories} directories' + (f', {files} files' if files else ''))
 
 

@@ -25,7 +25,8 @@ Kuka_Port = 7000              # Robot Port  (Found in Teach Pendant)
 async def proxy(reader, writer):
     # Runs until no more data being recieved
     while True:
-        # Await allows us to run the "reader" coroutine read(), letting us read up to the next 2048 bytes
+        # Run the "reader" coroutine read(), letting us read up to the next 2048 bytes,
+        # The await command allows the event loop to continue until the reader recieves data
         data = await reader.read(2048)
 
         # If what we read actually has data in it i.e. it's not empty
@@ -39,7 +40,7 @@ async def proxy(reader, writer):
         if "Extrude" in decoded_data:
 
             print(f"WE GOT THE JUICE BABY... \nNevermind we got this command: {decoded_data}")
-            #Write to serial port the characters between the brackets, the extrusion amount e.g. Extrude(432302) = write(32302)
+            #Write to serial port the characters between the brackets, the extrusion amount e.g. Extrude(432302) = write(432302)
             Serial_Port.write(decoded_data[decoded_data.find("(")+1:decoded_data.find(")")].encode())
         
         # Run the "writer" coroutine write(), attempts to send the data immeadiately, if it fails the data
